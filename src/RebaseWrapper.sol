@@ -15,4 +15,6 @@ contract RebaseWrapper is Initializable, Ownable2StepUpgradeable, UUPSUpgradeabl
     function unwrap(address token, uint256 amount) external returns (uint256) {}
 
     function isWrapped() external returns (address) {}
+
+    function _authorizeUpgrade(address) internal override {}
 }

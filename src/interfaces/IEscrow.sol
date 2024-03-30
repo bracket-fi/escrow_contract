@@ -17,7 +17,10 @@ interface IEscrow {
     error InvalidMerkleProof();
     error TokensAlreadyClaimed();
     error ArrayLengthMismatch();
-    error RebaseCannotBeChanged();
+    error TokenAlreadyAdded();
+    error BreakTimeMustBeInTheFuture();
+    error TokenNotAdded();
+    error NoChanges();
 
     event Deposit(address indexed user, address indexed token, uint256 amount);
     event Withdraw(address indexed user, address indexed token, uint256 amount);
