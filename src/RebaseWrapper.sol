@@ -11,7 +11,12 @@ import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol"
 contract RebaseWrapper is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
-    function wrap(address token, uint256 amount) external returns (uint256) {}
+    mapping(address => address) public wrappers;
+
+    function wrap(address token, uint256 amount) external returns (uint256) {
+        address wrapper = wrappers[token];
+    }
+
     function unwrap(address token, uint256 amount) external returns (uint256) {}
 
     function isWrapped() external returns (address) {}

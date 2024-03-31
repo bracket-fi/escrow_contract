@@ -84,7 +84,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
     /// @param token The address of the token to deposit
     /// @param amount The amount to deposit
     /// @return Deposited non-rebase tokens amount
-    function deposit(address token, uint256 amount) external onlyNotBroke returns (uint256) {
+    function deposit(address token, uint256 amount) external payable onlyNotBroke returns (uint256) {
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
@@ -95,7 +95,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         if (tokenInfo.rebase) {
-            amount = s.wrapper.wrap(token, amount);
+            (token, amount) = s.wrapper.wrap(token, amount);
         }
 
         s.usersBalance[msg.sender][token] += amount;
