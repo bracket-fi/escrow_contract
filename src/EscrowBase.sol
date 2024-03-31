@@ -34,6 +34,9 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         /// @notice The merkle roots for distributing tokens / points
         /// @dev Token Address -> Root
         mapping(address => bytes32) merkleRoots;
+        /// @notice The amounts claimed through the merkle
+        /// @dev User Address -> Token Address -> Claimed Amount
+        mapping(address => mapping(address => uint256)) claimedAmounts;
         /// @notice Wrapper contract for all the supported rebase tokens
         RebaseWrapper wrapper;
         /// @notice The timestamp at which the escrow will be broken
@@ -143,7 +146,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         if (!MerkleProof.verify(proof, root, leaf)) revert InvalidMerkleProof();
 
         uint256 claimable = amount - claimed;
-        claimedAmounts[msg.sender][token] = claimed + claimable;
+        s.claimedAmounts[msg.sender][token] = claimed + claimable;
 
         IERC20(token).safeTransfer(msg.sender, claimable);
     }
@@ -179,7 +182,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
 
     /// @notice Change or add a merkle root for a given token
     /// @param token The address of the token to add
-    /// @param bytes32 The merkle root of the tree
+    /// @param root The merkle root of the tree
     function addMerkleRoot(address token, bytes32 root) external onlyOwner {
         if (token == address(0)) revert ZeroAddress();
 

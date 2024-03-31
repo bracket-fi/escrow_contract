@@ -5,3 +5,7 @@ erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+@arbitrum/=lib/token-bridge-contracts/node_modules/@arbitrum/
+@offchainlabs/=lib/token-bridge-contracts/node_modules/@offchainlabs/
+nitro-contracts/=lib/token-bridge-contracts/lib/nitro-contracts/src/
+token-bridge-contracts/=lib/token-bridge-contracts/contracts/
