@@ -151,6 +151,42 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         IERC20(token).safeTransfer(msg.sender, claimable);
     }
 
+    function getTokenInfo(address token) external view returns (Token memory) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.tokens[token];
+    }
+
+    function getUserBalance(address user, address token) external view returns (uint256) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.usersBalance[user][token];
+    }
+
+    function getMerkleRoot(address token) external view returns (bytes32) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.merkleRoots[token];
+    }
+
+    function getClaimedAmount(address user, address token) external view returns (uint256) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.claimedAmounts[user][token];
+    }
+
+    function getWrapper() external view returns (address) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return address(s.wrapper);
+    }
+
+    function getBreakTimestamp() external view returns (uint96) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.breakTimestamp;
+    }
+
     /// @notice Add token to the whitelist
     /// @param token The address of the token to add
     /// @param rebase Whether the token is a rebase token
