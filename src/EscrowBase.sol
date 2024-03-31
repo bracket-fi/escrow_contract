@@ -76,7 +76,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
             }
         }
 
-        breakTime = breakTime;
+        breakTimestamp = breakTime;
     }
 
     /// @notice Deposit tokens into the escrow
