@@ -27,12 +27,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         /// @notice Users tokens balance
         /// @dev User Address -> Token Address -> User Balance
         mapping(address => mapping(address => uint256)) usersBalance;
-        /// @notice The merkle roots for distributing tokens / points
-        /// @dev Token Address -> Root
-        mapping(address => bytes32) merkleRoots;
-        /// @notice The amounts claimed through the merkle
-        /// @dev User Address -> Token Address -> Claimed Amount
-        mapping(address => mapping(address => uint256)) claimedAmounts;
         /// @notice The timestamp at which the escrow will be broken
         uint256 breakTimestamp;
     }
@@ -160,25 +154,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         return finalAmt;
     }
 
-    function claimTokens(address token, uint256 amount, bytes32[] memory proof) external {
-        EscrowBaseStorage storage s = _getStorage();
-
-        bytes32 root = s.merkleRoots[token];
-        uint256 claimed = s.claimedAmounts[msg.sender][token];
-
-        if (root == bytes32(0)) revert NoTokenDistribution();
-        if (proof.length == 0) revert InvalidMerkleProof();
-        if (claimed >= amount) revert TokensAlreadyClaimed();
-
-        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, amount))));
-        if (!MerkleProof.verify(proof, root, leaf)) revert InvalidMerkleProof();
-
-        uint256 claimable = amount - claimed;
-        s.claimedAmounts[msg.sender][token] = claimed + claimable;
-
-        IERC20(token).safeTransfer(msg.sender, claimable);
-    }
-
     function whitelistToken(address token, bool whitelisted) external onlyOwner {
         EscrowBaseStorage storage s = _getStorage();
 
@@ -186,14 +161,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         if (s.tokens[token].whitelisted == whitelisted) revert NoChanges();
 
         s.tokens[token].whitelisted = whitelisted;
-    }
-
-    function addMerkleRoot(address token, bytes32 root) external onlyOwner {
-        if (token == address(0)) revert ZeroAddress();
-
-        EscrowBaseStorage storage s = _getStorage();
-
-        s.merkleRoots[token] = root;
     }
 
     function getTokenInfo(address token) external view returns (Token memory) {
@@ -206,18 +173,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         EscrowBaseStorage storage s = _getStorage();
 
         return s.usersBalance[user][token];
-    }
-
-    function getMerkleRoot(address token) external view returns (bytes32) {
-        EscrowBaseStorage storage s = _getStorage();
-
-        return s.merkleRoots[token];
-    }
-
-    function getClaimedAmount(address user, address token) external view returns (uint256) {
-        EscrowBaseStorage storage s = _getStorage();
-
-        return s.claimedAmounts[user][token];
     }
 
     function getBreakTimestamp() external view returns (uint256) {

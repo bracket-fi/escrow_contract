@@ -55,22 +55,10 @@ interface IEscrow {
     /// @return Transfered rebase tokens amount
     function withdraw(address token, uint256 amount, bool unwrap) external returns (uint256);
 
-    /// @notice Claim tokens / points received during escrow, computed off-chain.
-    /// @dev This is computed off-chain and distributed according to a merkle tree
-    /// @param token The address of the token to withdraw
-    /// @param amount The amount to withdraw
-    /// @param proof The merkle proof
-    function claimTokens(address token, uint256 amount, bytes32[] memory proof) external;
-
     /// @notice Change whitelist of a token
     /// @param token The address of the token to whitelist / blacklist
     /// @param whitelisted Whether to whitelist or blacklist
     function whitelistToken(address token, bool whitelisted) external;
-
-    /// @notice Change or add a merkle root for a given token
-    /// @param token The address of the token to add
-    /// @param root The merkle root of the tree
-    function addMerkleRoot(address token, bytes32 root) external;
 
     /// @notice Add token to the whitelist
     /// @param token The address of the token to add
@@ -84,10 +72,6 @@ interface IEscrow {
     function getTokenInfo(address token) external view returns (Token memory);
 
     function getUserBalance(address user, address token) external view returns (uint256);
-
-    function getMerkleRoot(address token) external view returns (bytes32);
-
-    function getClaimedAmount(address user, address token) external view returns (uint256);
 
     function getBreakTimestamp() external view returns (uint256);
 }
