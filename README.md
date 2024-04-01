@@ -2,7 +2,7 @@
 
 ## Documentation
 
-The Bracket Escrow allows users to stake ETH and liquid staking ETH derivatives into the escrow in order to accumulate bracket points while the brktETH infrastructure is built. At the end of the escrow period, the funds will be bridged from the mainnet escrow into the arbitrum escrow, where the funds will be withdrawn and converted into brktETH.
+The Bracket Escrow allows users to stake ETH and liquid staking ETH derivatives into the escrow in order to accumulate bracket points while the brktETH infrastructure is built. At the end of the escrow period, the funds will be locked for them to be converted into brkETH, for escrows in other chains they will be bridged into Arbitrum where they will be withdrawn by the multisig and converted into brktETH and distributed to the users.
 
 After the escrow breaks and the assets are converted they will be distributed through a merkle tree in the Arbitrum Escrow. Moreover, any points or airdrops accumulated during the escrow will be also distributed in the original chain through the merkle distribution mechanism.
 
