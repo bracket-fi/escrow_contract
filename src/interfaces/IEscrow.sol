@@ -18,12 +18,14 @@ interface IEscrow {
     error TokensAlreadyClaimed();
     error ArrayLengthMismatch();
     error TokenAlreadyAdded();
+    error TokenCannotBeUnwrapped();
     error BreakTimeMustBeInTheFuture();
     error TokenNotAdded();
     error NoChanges();
     error WrapCallFailed();
     error CannotDepositETHAsToken();
+    error ETHSendFailed();
 
     event Deposit(address indexed user, address indexed token, uint256 amount);
-    event Withdraw(address indexed user, address indexed token, uint256 amount);
+    event Withdraw(address indexed user, address indexed token, uint256 amount, bool unwrapped);
 }

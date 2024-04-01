@@ -138,7 +138,8 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
     /// @notice Withdraw tokens from the escrow
     /// @param token The address of the token to withdraw
     /// @param amount The amount to withdraw
-    function withdraw(address token, uint256 amount) external onlyNotBroke {
+    /// @param unwrap Whether to unwrap the tokens or not
+    function withdraw(address token, uint256 amount, bool unwrap) external onlyNotBroke {
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
@@ -146,14 +147,28 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         uint256 balance = s.usersBalance[msg.sender][token];
         if (amount > balance) revert NotEnoughAmountStaked(balance);
 
-        unchecked {
-            s.usersBalance[msg.sender][token] = balance - amount;
-            s.tokens[token].totalStaked -= uint248(amount);
+        if (unwrap) {
+            Token memory tokenInfo = s.tokens[token];
+            if (tokenInfo.rebase == address(0)) {
+                revert TokenCannotBeUnwrapped();
+            } else if (tokenInfo.rebase == ETH_ADDRESS) {
+                _unwrapETH(token, amount);
+                (bool success,) = msg.sender.call{value: amount}("");
+                if (!success) revert ETHSendFailed();
+            } else {
+                uint256 rebaseAmt = _unwrapStdLST(token, amount);
+                IERC20(tokenInfo.rebase).safeTransfer(msg.sender, rebaseAmt);
+            }
+        } else {
+            IERC20(token).safeTransfer(msg.sender, amount);
         }
 
-        IERC20(token).safeTransfer(msg.sender, amount);
+        unchecked {
+            s.usersBalance[msg.sender][token] = balance - amount;
+            s.tokens[token].totalStaked -= amount;
+        }
 
-        emit Withdraw(msg.sender, token, amount);
+        emit Withdraw(msg.sender, token, amount, unwrap);
     }
 
     /// @notice Claim tokens / points received during escrow, computed off-chain.
@@ -278,6 +293,19 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
 
     function _wrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
         (bool success, bytes memory returnData) = wrapped.call(abi.encodeWithSignature("wrap(uint256)", amount));
+        if (!success) revert WrapCallFailed();
+
+        return abi.decode(returnData, (uint256));
+    }
+
+    function _unwrapETH(address wETH, uint256 amount) private {
+        (bool success,) = wETH.call(abi.encodeWithSignature("withdraw(uint256)", amount));
+
+        if (!success) revert WrapCallFailed();
+    }
+
+    function _unwrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
+        (bool success, bytes memory returnData) = wrapped.call(abi.encodeWithSignature("unwrap(uint256)", amount));
         if (!success) revert WrapCallFailed();
 
         return abi.decode(returnData, (uint256));
