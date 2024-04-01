@@ -7,7 +7,6 @@ import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/access
 import {MerkleProof} from "openzeppelin-contracts/utils/cryptography/MerkleProof.sol";
 
 import {IEscrow} from "./interfaces/IEscrow.sol";
-import {RebaseWrapper} from "./RebaseWrapper.sol";
 
 import {IERC20} from "openzeppelin-contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
@@ -20,14 +19,17 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
 
     struct Token {
         bool whitelisted;
-        bool rebase;
-        uint248 totalStaked;
+        address rebase;
+        uint256 totalStaked;
     }
 
     struct EscrowBaseStorage {
         /// @notice Supported Tokens Information
-        /// @dev Token Address -> Token Information
+        /// @dev Token Address -> Token Informatio
         mapping(address => Token) tokens;
+        /// @notice Wrapped Tokens Addresses
+        /// @dev Rebase Token Address -> Wrapped Token Address
+        mapping(address => address) wrappedTokens;
         /// @notice Users tokens balance
         /// @dev User Address -> Token Address -> User Balance
         mapping(address => mapping(address => uint256)) usersBalance;
@@ -37,11 +39,12 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         /// @notice The amounts claimed through the merkle
         /// @dev User Address -> Token Address -> Claimed Amount
         mapping(address => mapping(address => uint256)) claimedAmounts;
-        /// @notice Wrapper contract for all the supported rebase tokens
-        RebaseWrapper wrapper;
         /// @notice The timestamp at which the escrow will be broken
-        uint96 breakTimestamp;
+        uint256 breakTimestamp;
     }
+
+    //address(uint160(uint256(keccak256("bracket.eth.native.address"))));
+    address private constant ETH_ADDRESS = 0x1F020C40136a8cdaF7b20821dA30e59D44f2e9Ae;
 
     //keccak256(abi.encode(uint256(keccak256("bracket.storage.EscrowBase")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 private constant EscrowBaseStorageLocation =
@@ -57,13 +60,13 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         _;
     }
 
-    function _EscrowBase_init(address[] calldata tokens, bool[] calldata rebase, uint256 breakTime)
+    function _EscrowBase_init(address[] calldata tokens, address[] calldata rebase, uint256 breakTimestamp)
         internal
         onlyInitializing
     {
         __Ownable2Step_init();
 
-        if (breakTime <= block.timestamp) revert BreakTimeMustBeInTheFuture();
+        if (breakTimestamp <= block.timestamp) revert BreakTimeMustBeInTheFuture();
 
         uint256 length = tokens.length;
         if (length != rebase.length) revert ArrayLengthMismatch();
@@ -76,7 +79,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
             }
         }
 
-        breakTimestamp = breakTime;
+        extendEscrowBreak(breakTimestamp);
     }
 
     /// @notice Deposit tokens into the escrow
@@ -84,26 +87,52 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
     /// @param token The address of the token to deposit
     /// @param amount The amount to deposit
     /// @return Deposited non-rebase tokens amount
-    function deposit(address token, uint256 amount) external payable onlyNotBroke returns (uint256) {
+    function depositToken(address token, uint256 amount) external onlyNotBroke returns (uint256) {
+        if (token == ETH_ADDRESS) revert CannotDepositETHAsToken();
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
-        Token memory tokenInfo = s.tokens[token];
 
-        if (!tokenInfo.whitelisted) revert NotWhitelisted(token);
+        address wrapped = s.wrappedTokens[token];
+        // If token needs to be wrapped
+        if (wrapped != address(0)) {
+            Token memory tokenInfo = s.tokens[wrapped];
+            if (!tokenInfo.whitelisted) revert NotWhitelisted(wrapped);
 
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            amount = _wrapStdLST(wrapped, amount);
 
-        if (tokenInfo.rebase) {
-            (token, amount) = s.wrapper.wrap(token, amount);
+            _deposit(wrapped, amount);
+        } else {
+            Token memory tokenInfo = s.tokens[token];
+            if (!tokenInfo.whitelisted) revert NotWhitelisted(token);
+
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+            _deposit(token, amount);
         }
 
+        return amount;
+    }
+
+    function depositETH() external payable onlyNotBroke {
+        if (msg.value == 0) revert ZeroAmount();
+
+        EscrowBaseStorage storage s = _getStorage();
+
+        address wETH = s.wrappedTokens[ETH_ADDRESS];
+
+        _wrapETH(wETH, msg.value);
+        _deposit(wETH, msg.value);
+    }
+
+    function _deposit(address token, uint256 amount) private {
+        EscrowBaseStorage storage s = _getStorage();
+
         s.usersBalance[msg.sender][token] += amount;
-        s.tokens[token].totalStaked += uint248(amount);
+        s.tokens[token].totalStaked += amount;
 
         emit Deposit(msg.sender, token, amount);
-
-        return amount;
     }
 
     /// @notice Withdraw tokens from the escrow
@@ -175,33 +204,10 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         return s.claimedAmounts[user][token];
     }
 
-    function getWrapper() external view returns (address) {
-        EscrowBaseStorage storage s = _getStorage();
-
-        return address(s.wrapper);
-    }
-
-    function getBreakTimestamp() external view returns (uint96) {
+    function getBreakTimestamp() external view returns (uint256) {
         EscrowBaseStorage storage s = _getStorage();
 
         return s.breakTimestamp;
-    }
-
-    /// @notice Add token to the whitelist
-    /// @param token The address of the token to add
-    /// @param rebase Whether the token is a rebase token
-    function addToken(address token, bool rebase) public onlyOwner {
-        if (token == address(0)) revert ZeroAddress();
-
-        EscrowBaseStorage storage s = _getStorage();
-
-        if (s.tokens[token].whitelisted || s.tokens[token].totalStaked != 0) revert TokenAlreadyAdded();
-
-        s.tokens[token].whitelisted = true;
-
-        if (rebase) {
-            s.tokens[token].rebase = true;
-        }
     }
 
     /// @notice Change whitelist of a token
@@ -227,6 +233,34 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         s.merkleRoots[token] = root;
     }
 
+    /// @notice Add token to the whitelist
+    /// @param token The address of the token to add
+    /// @param rebase The rebase version address if any
+    function addToken(address token, address rebase) public onlyOwner {
+        if (token == address(0)) revert ZeroAddress();
+
+        EscrowBaseStorage storage s = _getStorage();
+
+        if (s.tokens[token].whitelisted || s.tokens[token].totalStaked != 0) revert TokenAlreadyAdded();
+
+        s.tokens[token].whitelisted = true;
+
+        if (rebase != address(0)) {
+            s.tokens[token].rebase = rebase;
+            s.wrappedTokens[rebase] = token;
+        }
+    }
+
+    /// @notice Extend time of the escrow break
+    /// @param extendTime The time to extend the escrow break
+    function extendEscrowBreak(uint256 extendTime) public onlyOwner {
+        EscrowBaseStorage storage s = _getStorage();
+
+        if (extendTime == 0) revert NoChanges();
+
+        s.breakTimestamp += extendTime;
+    }
+
     /// @notice Check whether the escrow is already broke
     function _checkEscrowBreak() internal view returns (bool) {
         EscrowBaseStorage storage s = _getStorage();
@@ -234,8 +268,20 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         return (block.timestamp >= s.breakTimestamp);
     }
 
-    /// @notice Authorize upgrade only to the contract's owner (multisig)
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function _wrapETH(address wETH, uint256 amount) private {
+        (bool success,) = wETH.call{value: amount}(abi.encodeWithSignature("deposit()"));
+
+        if (!success) revert WrapCallFailed();
+    }
+
+    function _wrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
+        (bool success, bytes memory returnData) = wrapped.call(abi.encodeWithSignature("wrap(uint256)", amount));
+        if (!success) revert WrapCallFailed();
+
+        return abi.decode(returnData, (uint256));
+    }
 
     /// @notice Get EscrowBase contract's storage
     function _getStorage() private pure returns (EscrowBaseStorage storage s) {
