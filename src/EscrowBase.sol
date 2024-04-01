@@ -17,12 +17,6 @@ import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol"
 abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable, IEscrow {
     using SafeERC20 for IERC20;
 
-    struct Token {
-        bool whitelisted;
-        address rebase;
-        uint256 totalStaked;
-    }
-
     struct EscrowBaseStorage {
         /// @notice Supported Tokens Information
         /// @dev Token Address -> Token Informatio
@@ -82,13 +76,8 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         extendEscrowBreak(breakTimestamp);
     }
 
-    /// @notice Deposit tokens into the escrow
-    /// @dev For rebase tokens the tokens will be wrapped on their non-rebase version, therefore the input amount may differ from the returned amount.
-    /// @param token The address of the token to deposit
-    /// @param amount The amount to deposit
-    /// @return Deposited non-rebase tokens amount
     function depositToken(address token, uint256 amount) external onlyNotBroke returns (uint256) {
-        if (token == ETH_ADDRESS) revert CannotDepositETHAsToken();
+        if (token == ETH_ADDRESS) revert CannotUseETHAddress();
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
@@ -135,11 +124,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         emit Deposit(msg.sender, token, amount);
     }
 
-    /// @notice Withdraw tokens from the escrow
-    /// @param token The address of the token to withdraw
-    /// @param amount The amount to withdraw
-    /// @param unwrap Whether to unwrap the tokens or not
-    function withdraw(address token, uint256 amount, bool unwrap) external onlyNotBroke {
+    function withdraw(address token, uint256 amount, bool unwrap) external onlyNotBroke returns (uint256) {
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
@@ -147,6 +132,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         uint256 balance = s.usersBalance[msg.sender][token];
         if (amount > balance) revert NotEnoughAmountStaked(balance);
 
+        uint256 finalAmt = amount;
         if (unwrap) {
             Token memory tokenInfo = s.tokens[token];
             if (tokenInfo.rebase == address(0)) {
@@ -156,8 +142,8 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
                 (bool success,) = msg.sender.call{value: amount}("");
                 if (!success) revert ETHSendFailed();
             } else {
-                uint256 rebaseAmt = _unwrapStdLST(token, amount);
-                IERC20(tokenInfo.rebase).safeTransfer(msg.sender, rebaseAmt);
+                finalAmt = _unwrapStdLST(token, amount);
+                IERC20(tokenInfo.rebase).safeTransfer(msg.sender, finalAmt);
             }
         } else {
             IERC20(token).safeTransfer(msg.sender, amount);
@@ -169,13 +155,10 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         }
 
         emit Withdraw(msg.sender, token, amount, unwrap);
+
+        return finalAmt;
     }
 
-    /// @notice Claim tokens / points received during escrow, computed off-chain.
-    /// @dev This is computed off-chain and distributed according to a merkle tree.
-    /// @param token The address of the token to withdraw
-    /// @param amount The amount to withdraw
-    /// @param proof The merkle proof
     function claimTokens(address token, uint256 amount, bytes32[] memory proof) external {
         EscrowBaseStorage storage s = _getStorage();
 
@@ -193,6 +176,23 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         s.claimedAmounts[msg.sender][token] = claimed + claimable;
 
         IERC20(token).safeTransfer(msg.sender, claimable);
+    }
+
+    function whitelistToken(address token, bool whitelisted) external onlyOwner {
+        EscrowBaseStorage storage s = _getStorage();
+
+        if (whitelisted && s.tokens[token].totalStaked == 0) revert TokenNotAdded();
+        if (s.tokens[token].whitelisted == whitelisted) revert NoChanges();
+
+        s.tokens[token].whitelisted = whitelisted;
+    }
+
+    function addMerkleRoot(address token, bytes32 root) external onlyOwner {
+        if (token == address(0)) revert ZeroAddress();
+
+        EscrowBaseStorage storage s = _getStorage();
+
+        s.merkleRoots[token] = root;
     }
 
     function getTokenInfo(address token) external view returns (Token memory) {
@@ -225,32 +225,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         return s.breakTimestamp;
     }
 
-    /// @notice Change whitelist of a token
-    /// @param token The address of the token to whitelist / blacklist
-    /// @param whitelisted Whether to whitelist or blacklist
-    function whitelistToken(address token, bool whitelisted) external onlyOwner {
-        EscrowBaseStorage storage s = _getStorage();
-
-        if (whitelisted && s.tokens[token].totalStaked == 0) revert TokenNotAdded();
-        if (s.tokens[token].whitelisted == whitelisted) revert NoChanges();
-
-        s.tokens[token].whitelisted = whitelisted;
-    }
-
-    /// @notice Change or add a merkle root for a given token
-    /// @param token The address of the token to add
-    /// @param root The merkle root of the tree
-    function addMerkleRoot(address token, bytes32 root) external onlyOwner {
-        if (token == address(0)) revert ZeroAddress();
-
-        EscrowBaseStorage storage s = _getStorage();
-
-        s.merkleRoots[token] = root;
-    }
-
-    /// @notice Add token to the whitelist
-    /// @param token The address of the token to add
-    /// @param rebase The rebase version address if any
     function addToken(address token, address rebase) public onlyOwner {
         if (token == address(0)) revert ZeroAddress();
 
@@ -266,8 +240,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         }
     }
 
-    /// @notice Extend time of the escrow break
-    /// @param extendTime The time to extend the escrow break
     function extendEscrowBreak(uint256 extendTime) public onlyOwner {
         EscrowBaseStorage storage s = _getStorage();
 
