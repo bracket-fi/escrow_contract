@@ -5,10 +5,11 @@
 The Bracket Escrow allows users to stake ETH and liquid staking ETH derivatives into the escrow
 on either L1 Ethereum or Arbitrum.  Many will be doing this in order to accumulate bracket reward 
 points (off-chain) while the brktETH infrastructure is built and TVL is built. During the pre-break 
-period, a user will be free to remove their funds in the assets the deposited.
+period, a user will be free to remove their funds in amounts of the assets they deposited.
 
-At the end of the escrow period, the funds will be locked and no longer available for withdraw.
-All funds will be bridged to Arbitrum and become part of the pooled treasury of brktETH.
+At the end of the escrow period, the funds will be locked and no longer be available for withdraw.
+All funds will be bridged to Arbitrum and become part of the pooled treasury initially in the escrow
+contract and then eventually within the brktETH contract.
 The users will receive brktETH for the amount of equivalent ETH they held at the time of escrow-break. 
 Once the assets are bridged to Aribitrum, brktETH will be issued on Arbitrum.  BrktETH will be a
 separate contract and owned by a multisig.  BrktETH will deposited within the escrow contract 
