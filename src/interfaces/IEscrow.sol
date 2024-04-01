@@ -36,18 +36,18 @@ interface IEscrow {
     }
 
     /// @notice Deposit tokens into the escrow
-    /// @dev For rebase tokens the tokens will be wrapped on their non-rebase version, therefore the input amount may differ from the returned amount.
+    /// @dev For rebase tokens the tokens will be wrapped on their non-rebase version, therefore the input amount may differ from the returned amount
     /// @param token The address of the token to deposit
     /// @param amount The amount to deposit
     /// @return Deposited non-rebase tokens amount
     function depositToken(address token, uint256 amount) external returns (uint256);
 
     /// @notice Deposit ETH into the escrow
-    /// @dev ETH sent will be wrapped into WETH and deposited.
+    /// @dev ETH sent will be wrapped into WETH and deposited
     function depositETH() external payable;
 
     /// @notice Withdraw tokens from the escrow
-    /// @dev For rebase tokens the tokens will be unwrapped on their rebase version, therefore the input amount may differ from the transfered and returned amount.
+    /// @dev For rebase tokens the tokens will be unwrapped on their rebase version, therefore the input amount may differ from the transfered and returned amount
     /// @param token The address of the token to withdraw
     /// @param amount The amount to withdraw
     /// @param unwrap Whether to unwrap the tokens or not
@@ -55,7 +55,7 @@ interface IEscrow {
     function withdraw(address token, uint256 amount, bool unwrap) external returns (uint256);
 
     /// @notice Claim tokens / points received during escrow, computed off-chain.
-    /// @dev This is computed off-chain and distributed according to a merkle tree.
+    /// @dev This is computed off-chain and distributed according to a merkle tree
     /// @param token The address of the token to withdraw
     /// @param amount The amount to withdraw
     /// @param proof The merkle proof

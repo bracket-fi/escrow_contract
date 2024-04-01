@@ -1,66 +1,16 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+# Bracket Escrow Contracts
 
 ## Documentation
 
-https://book.getfoundry.sh/
+The Bracket Escrow allows users to stake ETH and liquid staking ETH derivatives into the escrow in order to accumulate bracket points while the brktETH infrastructure is built. At the end of the escrow period, the funds will be bridged from the mainnet escrow into the arbitrum escrow, where the funds will be withdrawn and converted into brktETH.
 
-## Usage
+After the escrow breaks and the assets are converted they will be distributed through a merkle tree in the Arbitrum Escrow. Moreover, any points or airdrops accumulated during the escrow will be also distributed in the original chain through the merkle distribution mechanism.
 
-### Build
+### MainEscrow
+This will be the main escrow in arbitrum it contains all the basic functionality from the escrow while also allowing to withdraw escrowed funds by the owner multisig for them to be converted into brkETH after escrow breaks.
 
-```shell
-$ forge build
-```
+### BridgeEscrow
+This is the contract meant to be deployed on other chains than Arbitrum (for now only ETH Mainnet) and that will allow to bridge tokens into Arbitrum through the official Arbitrum bridge after escrow breaks.
 
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+### EscrowBase
+This contains all the escrow functionality and is the contract from which both `MainEscrow` and `BridgeEscrow` contracts inherit from. For more information about each function functionality check the natspec in `IEscrow`.
