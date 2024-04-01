@@ -13,7 +13,7 @@ contract MainEscrow is EscrowBase {
         _disableInitializers();
     }
 
-    function initialize(address[] calldata tokens, address[] calldata rebase, uint96 breakTime) external initializer {
+    function initialize(address[] calldata tokens, address[] calldata rebase, uint256 breakTime) external initializer {
         _EscrowBase_init(tokens, rebase, breakTime);
     }
 
@@ -22,7 +22,10 @@ contract MainEscrow is EscrowBase {
 
         for (uint256 i; i < length; ++i) {
             IERC20 token = IERC20(tokens[i]);
-            token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+            uint256 balance = token.balanceOf(address(this));
+            if(balance != 0) {
+                token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+            }
         }
     }
 }

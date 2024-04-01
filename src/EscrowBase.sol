@@ -59,6 +59,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         onlyInitializing
     {
         __Ownable2Step_init();
+        _transferOwnership(msg.sender);
 
         if (breakTimestamp <= block.timestamp) revert BreakTimeMustBeInTheFuture();
 

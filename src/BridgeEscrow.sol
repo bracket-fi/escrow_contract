@@ -15,7 +15,7 @@ contract BridgeEscrow is EscrowBase {
         _disableInitializers();
     }
 
-    function initialize(address[] calldata tokens, address[] calldata rebase, uint96 breakTime, address router)
+    function initialize(address[] calldata tokens, address[] calldata rebase, uint256 breakTime, address router)
         external
         initializer
     {
