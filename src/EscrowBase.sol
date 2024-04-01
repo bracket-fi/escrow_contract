@@ -74,7 +74,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
             }
         }
 
-        extendEscrowBreak(breakTimestamp);
+        setEscrowBreak(breakTimestamp);
     }
 
     function depositToken(address token, uint256 amount) external onlyNotBroke returns (uint256) {
@@ -241,12 +241,11 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         }
     }
 
-    function extendEscrowBreak(uint256 extendTime) public onlyOwner {
+    function setEscrowBreak(uint256 breakTimestamp) public onlyOwner {
+        if (breakTimestamp <= block.timestamp) revert BreakTimeMustBeInTheFuture();
+
         EscrowBaseStorage storage s = _getStorage();
-
-        if (extendTime == 0) revert NoChanges();
-
-        s.breakTimestamp += extendTime;
+        s.breakTimestamp = breakTimestamp;
     }
 
     /// @notice Check whether the escrow is already broke

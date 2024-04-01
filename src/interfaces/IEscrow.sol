@@ -28,6 +28,7 @@ interface IEscrow {
     error WrapCallFailed();
     error ZeroAddress();
     error ZeroAmount();
+    error CannotSetEscrowBreakInThePast();
 
     struct Token {
         bool whitelisted;
@@ -76,9 +77,9 @@ interface IEscrow {
     /// @param rebase The rebase version address if any
     function addToken(address token, address rebase) external;
 
-    /// @notice Extend escrow break timestamp
-    /// @param extendTime The amount of seconds to extend the timestamp with
-    function extendEscrowBreak(uint256 extendTime) external;
+    /// @notice Set the escrow break timestamp
+    /// @param breakTimestamp The timestamp of the new escrow break
+    function setEscrowBreak(uint256 breakTimestamp) external;
 
     function getTokenInfo(address token) external view returns (Token memory);
 
