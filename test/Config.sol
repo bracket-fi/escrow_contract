@@ -4,10 +4,21 @@
 pragma solidity ^0.8.20;
 
 uint256 constant ESCROW_TIME = 30 days;
+
+address constant ETH_MOCK_ADDRESS = 0x1F020C40136a8cdaF7b20821dA30e59D44f2e9Ae;
+
 address constant ARBITRUM_WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-address constant ARBITRUM_STETH = address(0);
-address constant ARBITRUM_WSTETH = address(0);
-address constant ARBITRUM_RETH = address(0);
-address constant ARBITRUM_EZETH = address(0);
-address constant ARBITRUM_EETH = address(0);
-address constant ARBITRUM_WEETH = address(0);
+address constant ARBITRUM_WSTETH = 0x0fBcbaEA96Ce0cF7Ee00A8c19c3ab6f5Dc8E1921;
+address constant ARBITRUM_RETH = 0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8;
+address constant ARBITRUM_EZETH = 0x2416092f143378750bb29b79eD961ab195CcEea5;
+address constant ARBITRUM_WEETH = 0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe;
+
+address constant MAINNET_BRIDGE = 0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef;
+
+address constant MAINNET_WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+address constant MAINNET_STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+address constant MAINNET_WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+address constant MAINNET_RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+address constant MAINNET_EZETH = 0xbf5495Efe5DB9ce00f80364C8B423567e58d2110;
+address constant MAINNET_EETH = 0x35fA164735182de50811E8e2E824cFb9B6118ac2;
+address constant MAINNET_WEETH = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee;
