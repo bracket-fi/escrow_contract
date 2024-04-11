@@ -13,3 +13,6 @@
 [submodule "lib/xERC20"]
 	path = lib/xERC20
 	url = https://github.com/connext/xERC20
+[submodule "lib/connext-interfaces"]
+	path = lib/connext-interfaces
+	url = https://github.com/connext/interfaces
