@@ -21,6 +21,9 @@ contract BridgeEscrow is EscrowBase {
     XERC20Lockbox public renzoLockbox;
     IConnext public connext;
 
+    // Indicator for the fallback function to fail or not in order to test ETH unwrap.
+    bool public failReceive;
+
     constructor() {
         _disableInitializers();
     }
@@ -35,7 +38,7 @@ contract BridgeEscrow is EscrowBase {
     }
 
     function bridgeTokenArb(address token, address arbEscrow, uint256 amount, uint256 maxGas, uint256 gasPrice)
-        public
+        external
         onlyOwner
         onlyBroke
     {
@@ -44,7 +47,7 @@ contract BridgeEscrow is EscrowBase {
     }
 
     function bridgeTokenConnext(address token, address arbEscrow, uint256 amount, uint256 slippage, uint256 relayerFee)
-        public
+        external
         onlyOwner
         onlyBroke
     {

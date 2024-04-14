@@ -7,10 +7,10 @@ import "./TestsBase.sol";
 contract MainEscrowTests is TestsBase {
     function setUp() public override {
         super.setUp();
-        vm.selectFork(forks[ForkChain.ARBITRUM]);
+        vm.selectFork(forks[ForkChain.MAINNET]);
 
-        activeFork = ForkChain.ARBITRUM;
-        activeEscrow = IEscrow(address(arbEscrow));
+        activeFork = ForkChain.MAINNET;
+        activeEscrow = IEscrow(address(ethEscrow));
     }
 
     // TODO: test token info getter.

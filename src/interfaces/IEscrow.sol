@@ -25,6 +25,7 @@ interface IEscrow {
     error TokenCannotBeUnwrapped();
     error TokenNotAdded();
     error TokensAlreadyClaimed();
+    error UnwrapCallFailed();
     error WrapCallFailed();
     error ZeroAddress();
     error ZeroAmount();
@@ -70,6 +71,8 @@ interface IEscrow {
     function setEscrowBreak(uint256 breakTimestamp) external;
 
     function getTokenInfo(address token) external view returns (Token memory);
+
+    function getWrappedToken(address token) external view returns (address);
 
     function getUserBalance(address user, address token) external view returns (uint256);
 

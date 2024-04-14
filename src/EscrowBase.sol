@@ -11,6 +11,8 @@ import {IEscrow} from "./interfaces/IEscrow.sol";
 import {IERC20} from "openzeppelin-contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "forge-std/Test.sol";
+
 /// @title Bracket's Escrow Base Contract
 /// @author Bracket Finance
 /// @dev Has the basic functionality shared across the different escrows and it is the contract from which the other contracts inherit from
@@ -80,18 +82,30 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         address wrapped = s.wrappedTokens[token];
         // If token needs to be wrapped
         if (wrapped != address(0)) {
+            uint256 balBefore = IERC20(wrapped).balanceOf(address(this));
+
             Token memory tokenInfo = s.tokens[wrapped];
             if (!tokenInfo.whitelisted) revert NotWhitelisted(wrapped);
 
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(token).safeIncreaseAllowance(wrapped, amount);
             amount = _wrapStdLST(wrapped, amount);
+
+            uint256 balAfter = IERC20(wrapped).balanceOf(address(this));
+
+            require(balAfter - balBefore == amount, "Balance mismatch");
 
             _deposit(wrapped, amount);
         } else {
+            uint256 balBefore = IERC20(token).balanceOf(address(this));
             Token memory tokenInfo = s.tokens[token];
             if (!tokenInfo.whitelisted) revert NotWhitelisted(token);
 
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+            uint256 balAfter = IERC20(token).balanceOf(address(this));
+
+            require(balAfter - balBefore == amount, "Balance mismatch");
 
             _deposit(token, amount);
         }
@@ -138,6 +152,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
                 if (!success) revert ETHSendFailed();
             } else {
                 finalAmt = _unwrapStdLST(token, amount);
+
                 IERC20(tokenInfo.rebase).safeTransfer(msg.sender, finalAmt);
             }
         } else {
@@ -167,6 +182,12 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         EscrowBaseStorage storage s = _getStorage();
 
         return s.tokens[token];
+    }
+
+    function getWrappedToken(address token) external view returns (address) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.wrappedTokens[token];
     }
 
     function getUserBalance(address user, address token) external view returns (uint256) {
@@ -233,7 +254,7 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
 
     function _unwrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
         (bool success, bytes memory returnData) = wrapped.call(abi.encodeWithSignature("unwrap(uint256)", amount));
-        if (!success) revert WrapCallFailed();
+        if (!success) revert UnwrapCallFailed();
 
         return abi.decode(returnData, (uint256));
     }
@@ -244,4 +265,6 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
             s.slot := EscrowBaseStorageLocation
         }
     }
+
+    fallback() external payable {}
 }
