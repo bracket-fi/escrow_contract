@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 
-import "./Config.sol";
+import "script/Config.sol";
 
 import {IEscrow} from "src/interfaces/IEscrow.sol";
 import {MainEscrow} from "src/MainEscrow.sol";
@@ -104,11 +104,12 @@ abstract contract TestsBase is Test {
         ERC1967Proxy bridgeEscrowProxy = new ERC1967Proxy(
             address(bridgeEscrowImpl),
             abi.encodeWithSignature(
-                "initialize(address[],address[],uint256,address)",
+                "initialize(address[],address[],uint256,address,address)",
                 initTokens,
                 initRebase,
                 breakTimestamp,
-                MAINNET_BRIDGE
+                MAINNET_BRIDGE,
+                CONNEXT_BRIDGE
             )
         );
 

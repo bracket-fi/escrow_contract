@@ -28,13 +28,20 @@ contract BridgeEscrow is EscrowBase {
         _disableInitializers();
     }
 
-    function initialize(address[] calldata tokens, address[] calldata rebase, uint256 breakTime, address router)
-        external
-        initializer
-    {
+    function initialize(
+        address[] calldata tokens,
+        address[] calldata rebase,
+        uint256 breakTime,
+        address router,
+        address connextBridge
+    ) external initializer {
         _EscrowBase_init(tokens, rebase, breakTime);
 
+        if (router == address(0)) revert ZeroAddress();
+        if (connextBridge == address(0)) revert ZeroAddress();
+
         bridgeRouter = IL1GatewayRouter(router);
+        connext = IConnext(connextBridge);
     }
 
     function bridgeTokenArb(address token, address arbEscrow, uint256 amount, uint256 maxGas, uint256 gasPrice)
