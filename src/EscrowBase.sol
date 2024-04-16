@@ -5,6 +5,7 @@ import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Init
 import {UUPSUpgradeable} from "openzeppelin-contracts/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {MerkleProof} from "openzeppelin-contracts/utils/cryptography/MerkleProof.sol";
+import {ReentrancyGuard} from "openzeppelin-contracts/utils/ReentrancyGuard.sol";
 
 import {IEscrow} from "./interfaces/IEscrow.sol";
 
@@ -16,7 +17,7 @@ import "forge-std/Test.sol";
 /// @title Bracket's Escrow Base Contract
 /// @author Bracket Finance
 /// @dev Has the basic functionality shared across the different escrows and it is the contract from which the other contracts inherit from
-abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable, IEscrow {
+abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgradeable, UUPSUpgradeable, IEscrow {
     using SafeERC20 for IERC20;
 
     struct EscrowBaseStorage {
@@ -133,7 +134,12 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
         emit Deposit(msg.sender, token, amount);
     }
 
-    function withdraw(address token, uint256 amount, bool unwrap) external onlyNotBroke returns (uint256) {
+    function withdraw(address token, uint256 amount, bool unwrap)
+        external
+        onlyNotBroke
+        nonReentrant
+        returns (uint256)
+    {
         if (amount == 0) revert ZeroAmount();
 
         EscrowBaseStorage storage s = _getStorage();
@@ -159,10 +165,8 @@ abstract contract EscrowBase is Initializable, Ownable2StepUpgradeable, UUPSUpgr
             IERC20(token).safeTransfer(msg.sender, amount);
         }
 
-        unchecked {
-            s.usersBalance[msg.sender][token] = balance - amount;
-            s.tokens[token].totalStaked -= amount;
-        }
+        s.usersBalance[msg.sender][token] = balance - amount;
+        s.tokens[token].totalStaked -= amount;
 
         emit Withdraw(msg.sender, token, amount, unwrap);
 
