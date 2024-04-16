@@ -55,6 +55,7 @@ contract BridgeEscrow is EscrowBase {
 
     function bridgeTokenConnext(address token, address arbEscrow, uint256 amount, uint256 slippage, uint256 relayerFee)
         external
+        payable
         onlyOwner
         onlyBroke
     {
