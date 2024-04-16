@@ -63,7 +63,7 @@ contract BridgeEscrow is EscrowBase {
         IXERC20 xToken = renzoLockbox.XERC20();
         renzoLockbox.deposit(amount);
 
-        IERC20(address(xToken)).safeIncreaseAllowance(address(renzoLockbox), amount);
+        IERC20(address(xToken)).safeIncreaseAllowance(address(connext), amount);
         connext.xcall{value: relayerFee}(
             1634886255, // _destination: Domain ID of the destination chain
             arbEscrow, // _to: address receiving the funds on the destination
