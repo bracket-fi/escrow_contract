@@ -19,3 +19,6 @@
 [submodule "lib/connext-interfaces"]
 	path = lib/connext-interfaces
 	url = https://github.com/connext/interfaces
+[submodule "lib/murky"]
+	path = lib/murky
+	url = https://github.com/dmfxyz/murky

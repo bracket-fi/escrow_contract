@@ -18,3 +18,4 @@ prb/test/=lib/xERC20/lib/prb-test/src/
 solmate/=lib/xERC20/lib/permit2/lib/solmate/
 xERC20/=lib/xERC20/
 connext/=lib/connext-interfaces/core/
+murky/=lib/murky/src/

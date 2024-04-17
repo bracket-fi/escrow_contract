@@ -12,8 +12,4 @@ contract MainEscrowTests is TestsBase {
         activeFork = ForkChain.MAINNET;
         activeEscrow = IEscrow(address(ethEscrow));
     }
-
-    // TODO: test token info getter.
-    // TODO: test unwrap on bridge contract.
-    // TODO: test bridge expect call.
 }
