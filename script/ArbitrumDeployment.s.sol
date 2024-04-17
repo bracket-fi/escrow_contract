@@ -9,7 +9,7 @@ import "./Config.sol";
 import {MainEscrow} from "src/MainEscrow.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract MainnetDeploymentScript is Script {
+contract ArbitrumDeploymentScript is Script {
     function run() public returns (address) {
         address[] memory initTokens = new address[](5);
         address[] memory initRebase = new address[](5);
