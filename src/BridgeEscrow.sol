@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {EscrowBase} from "./EscrowBase.sol";
 
 import {IL1GatewayRouter} from "token-bridge-contracts/tokenbridge/ethereum/gateway/IL1GatewayRouter.sol";
+import {IGatewayRouter} from "token-bridge-contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
 
 import {IERC20} from "openzeppelin-contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
@@ -46,11 +47,17 @@ contract BridgeEscrow is EscrowBase {
 
     function bridgeTokenArb(address token, address arbEscrow, uint256 amount, uint256 maxGas, uint256 gasPrice)
         external
+        payable
         onlyOwner
         onlyBroke
     {
-        IERC20(token).safeIncreaseAllowance(address(bridgeRouter), amount);
-        bridgeRouter.outboundTransferCustomRefund(token, msg.sender, arbEscrow, amount, maxGas, gasPrice, bytes(""));
+        address gateway = IGatewayRouter(address(bridgeRouter)).getGateway(token);
+
+        IERC20(token).safeIncreaseAllowance(gateway, amount);
+
+        bridgeRouter.outboundTransferCustomRefund{value: msg.value}(
+            token, msg.sender, arbEscrow, amount, maxGas, gasPrice, bytes("")
+        );
     }
 
     function bridgeTokenConnext(address token, address arbEscrow, uint256 amount, uint256 slippage, uint256 relayerFee)

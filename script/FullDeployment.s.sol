@@ -8,7 +8,7 @@ import {ArbitrumDeploymentScript} from "./ArbitrumDeployment.s.sol";
 import {MainnetDeploymentScript} from "./MainnetDeployment.s.sol";
 
 contract FullDeploymentScript is Script {
-    function run() public returns (address) {
+    function run() public {
         ArbitrumDeploymentScript arbitrumDeployment = new ArbitrumDeploymentScript();
         MainnetDeploymentScript mainnetDeployment = new MainnetDeploymentScript();
 
