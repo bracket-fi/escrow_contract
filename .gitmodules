@@ -10,15 +10,12 @@
 [submodule "lib/token-bridge-contracts"]
 	path = lib/token-bridge-contracts
 	url = https://github.com/OffchainLabs/token-bridge-contracts
-[submodule "lib/xERC20"]
-	path = lib/xERC20
-	url = https://github.com/connext/xERC20
-[submodule "lib/xERC20"]
-	path = lib/xERC20
-	url = https://github.com/connext/interfaces
 [submodule "lib/connext-interfaces"]
 	path = lib/connext-interfaces
 	url = https://github.com/connext/interfaces
 [submodule "lib/murky"]
 	path = lib/murky
 	url = https://github.com/dmfxyz/murky
+[submodule "lib/xERC20"]
+	path = lib/xERC20
+	url = https://github.com/connext/xERC20

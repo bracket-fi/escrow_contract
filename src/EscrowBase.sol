@@ -30,6 +30,12 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
         /// @notice Users tokens balance
         /// @dev User Address -> Token Address -> User Balance
         mapping(address => mapping(address => uint256)) usersBalance;
+        /// @notice The merkle roots for distributing tokens / points
+        /// @dev Token Address -> Root
+        mapping(address => bytes32) merkleRoots;
+        /// @notice The amounts claimed through the merkle
+        /// @dev User Address -> Token Address -> Claimed Amount
+        mapping(address => mapping(address => uint256)) claimedAmounts;
         /// @notice The timestamp at which the escrow will be broken
         uint256 breakTimestamp;
     }
@@ -173,6 +179,42 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
         return finalAmt;
     }
 
+    function withdrawEscrow(address[] calldata tokens) external onlyOwner onlyBroke {
+        uint256 length = tokens.length;
+
+        for (uint256 i; i < length; ++i) {
+            IERC20 token = IERC20(tokens[i]);
+            uint256 balance = token.balanceOf(address(this));
+            if (balance != 0) {
+                token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+            }
+        }
+    }
+
+    /// @notice Claim tokens / points received during escrow, computed off-chain.
+    /// @dev This is computed off-chain and distributed according to a merkle tree
+    /// @param token The address of the token to withdraw
+    /// @param amount The amount to withdraw
+    /// @param proof The merkle proof
+    function claimTokens(address token, uint256 amount, bytes32[] memory proof) external {
+        EscrowBaseStorage storage s = _getStorage();
+
+        bytes32 root = s.merkleRoots[token];
+        uint256 claimed = s.claimedAmounts[msg.sender][token];
+
+        if (root == bytes32(0)) revert NoTokenDistribution();
+        if (proof.length == 0) revert InvalidMerkleProof();
+        if (claimed >= amount) revert TokensAlreadyClaimed();
+
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, amount))));
+        if (!MerkleProof.verify(proof, root, leaf)) revert InvalidMerkleProof();
+
+        uint256 claimable = amount - claimed;
+        s.claimedAmounts[msg.sender][token] = claimed + claimable;
+
+        IERC20(token).safeTransfer(msg.sender, claimable);
+    }
+
     function whitelistToken(address token, bool whitelisted) external onlyOwner {
         EscrowBaseStorage storage s = _getStorage();
 
@@ -206,6 +248,18 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
         return s.breakTimestamp;
     }
 
+    function getMerkleRoot(address token) external view returns (bytes32) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.merkleRoots[token];
+    }
+
+    function getClaimedAmount(address user, address token) external view returns (uint256) {
+        EscrowBaseStorage storage s = _getStorage();
+
+        return s.claimedAmounts[user][token];
+    }
+
     function addToken(address token, address rebase) public onlyOwner {
         if (token == address(0)) revert ZeroAddress();
 
@@ -219,6 +273,17 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
             s.tokens[token].rebase = rebase;
             s.wrappedTokens[rebase] = token;
         }
+    }
+
+    /// @notice Change or add a merkle root for a given token
+    /// @param token The address of the token to add
+    /// @param root The merkle root of the tree
+    function addMerkleRoot(address token, bytes32 root) external onlyOwner {
+        if (token == address(0)) revert ZeroAddress();
+
+        EscrowBaseStorage storage s = _getStorage();
+
+        s.merkleRoots[token] = root;
     }
 
     function setEscrowBreak(uint256 breakTimestamp) public onlyOwner {
@@ -269,6 +334,8 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
             s.slot := EscrowBaseStorageLocation
         }
     }
+
+    receive() external payable {}
 
     fallback() external payable {}
 }
