@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @dev Interface of the BrktETH escrow contract.
-interface IEscrow {
+interface IBracketEscrow {
     event Deposit(address indexed user, address indexed token, uint256 amount);
     event Withdraw(address indexed user, address indexed token, uint256 amount, bool unwrapped);
 
@@ -42,11 +42,7 @@ interface IEscrow {
     /// @param token The address of the token to deposit
     /// @param amount The amount to deposit
     /// @return Deposited non-rebase tokens amount
-    function depositToken(address token, uint256 amount) external returns (uint256);
-
-    /// @notice Deposit ETH into the escrow
-    /// @dev ETH sent will be wrapped into WETH and deposited
-    function depositETH() external payable;
+    function depositToken(address account, address token, uint256 amount) external returns (uint256);
 
     /// @notice Withdraw tokens from the escrow
     /// @dev For rebase tokens the tokens will be unwrapped on their rebase version, therefore the input amount may differ from the transfered and returned amount

@@ -7,17 +7,15 @@ import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/access
 import {MerkleProof} from "openzeppelin-contracts/utils/cryptography/MerkleProof.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/utils/ReentrancyGuard.sol";
 
-import {IEscrow} from "./interfaces/IEscrow.sol";
+import {IBracketEscrow} from "./interfaces/IBracketEscrow.sol";
 
 import {IERC20} from "openzeppelin-contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "forge-std/Test.sol";
-
-/// @title Bracket's Escrow Base Contract
+/// @title Bracket's Escrow
 /// @author Bracket Finance
-/// @dev Has the basic functionality shared across the different escrows and it is the contract from which the other contracts inherit from
-abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgradeable, UUPSUpgradeable, IEscrow {
+/// @dev Bracket's finance escrow contract
+contract BracketEscrow is Initializable, ReentrancyGuard, Ownable2StepUpgradeable, UUPSUpgradeable, IBracketEscrow {
     using SafeERC20 for IERC20;
 
     struct EscrowBaseStorage {
@@ -57,9 +55,9 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
         _;
     }
 
-    function _EscrowBase_init(address[] calldata tokens, address[] calldata rebase, uint256 breakTimestamp)
-        internal
-        onlyInitializing
+    function initialize(address[] calldata tokens, address[] calldata rebase, uint256 breakTimestamp)
+        public
+        initializer
     {
         __Ownable2Step_init();
         _transferOwnership(msg.sender);
@@ -80,7 +78,7 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
         setEscrowBreak(breakTimestamp);
     }
 
-    function depositToken(address token, uint256 amount) external onlyNotBroke returns (uint256) {
+    function depositToken(address account, address token, uint256 amount) external onlyNotBroke returns (uint256) {
         if (token == ETH_ADDRESS) revert CannotUseETHAddress();
         if (amount == 0) revert ZeroAmount();
 
@@ -102,7 +100,7 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
 
             require(balAfter - balBefore == amount, "Balance mismatch");
 
-            _deposit(wrapped, amount);
+            _deposit(account, wrapped, amount);
         } else {
             uint256 balBefore = IERC20(token).balanceOf(address(this));
             Token memory tokenInfo = s.tokens[token];
@@ -114,30 +112,19 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
 
             require(balAfter - balBefore == amount, "Balance mismatch");
 
-            _deposit(token, amount);
+            _deposit(account, token, amount);
         }
 
         return amount;
     }
 
-    function depositETH() external payable onlyNotBroke {
-        if (msg.value == 0) revert ZeroAmount();
-
+    function _deposit(address account, address token, uint256 amount) private {
         EscrowBaseStorage storage s = _getStorage();
 
-        address wETH = s.wrappedTokens[ETH_ADDRESS];
-
-        _wrapETH(wETH, msg.value);
-        _deposit(wETH, msg.value);
-    }
-
-    function _deposit(address token, uint256 amount) private {
-        EscrowBaseStorage storage s = _getStorage();
-
-        s.usersBalance[msg.sender][token] += amount;
+        s.usersBalance[account][token] += amount;
         s.tokens[token].totalStaked += amount;
 
-        emit Deposit(msg.sender, token, amount);
+        emit Deposit(account, token, amount);
     }
 
     function withdraw(address token, uint256 amount, bool unwrap)
@@ -158,10 +145,6 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
             Token memory tokenInfo = s.tokens[token];
             if (tokenInfo.rebase == address(0)) {
                 revert TokenCannotBeUnwrapped();
-            } else if (tokenInfo.rebase == ETH_ADDRESS) {
-                _unwrapETH(token, amount);
-                (bool success,) = msg.sender.call{value: amount}("");
-                if (!success) revert ETHSendFailed();
             } else {
                 finalAmt = _unwrapStdLST(token, amount);
 
@@ -302,23 +285,11 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function _wrapETH(address wETH, uint256 amount) private {
-        (bool success,) = wETH.call{value: amount}(abi.encodeWithSignature("deposit()"));
-
-        if (!success) revert WrapCallFailed();
-    }
-
     function _wrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
         (bool success, bytes memory returnData) = wrapped.call(abi.encodeWithSignature("wrap(uint256)", amount));
         if (!success) revert WrapCallFailed();
 
         return abi.decode(returnData, (uint256));
-    }
-
-    function _unwrapETH(address wETH, uint256 amount) private {
-        (bool success,) = wETH.call(abi.encodeWithSignature("withdraw(uint256)", amount));
-
-        if (!success) revert WrapCallFailed();
     }
 
     function _unwrapStdLST(address wrapped, uint256 amount) private returns (uint256) {
@@ -334,8 +305,4 @@ abstract contract EscrowBase is Initializable, ReentrancyGuard, Ownable2StepUpgr
             s.slot := EscrowBaseStorageLocation
         }
     }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 }
